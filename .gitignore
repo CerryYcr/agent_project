@@ -1,0 +1,28 @@
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 敏感信息（绝对不能传！）
+.env
+*.env
+
+# 数据输出与日志（避免仓库过大）
+data_output/
+logs/
+reports/
+*.log
+
+# 缓存文件
+search_cache.json
+web_agent_cookies.json
+cache.json
+
+# IDE 配置
+.vscode/
+.idea/
