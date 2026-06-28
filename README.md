@@ -106,21 +106,51 @@ python agent_bi.py --query "最近30天销售额最高的产品是什么？"
 ## 项目结构
 
 ```
-agent_project/
-├── agent_bi.py               # 父 Agent 主程序（ReAct 循环 + BI 可视化）
-├── db_agent.py               # 数据分析子 Agent（MySQL 查询）
-├── info_agent.py             # 信息检索子 Agent（Tavily 搜索）
-├── web_agent.py              # 网页抓取子 Agent（表格提取）
-├── init.sql                  # MySQL 建表 + 测试数据
-├── .env                      # 环境变量（API Keys，不提交）
-├── .gitignore                # Git 忽略文件
-├── requirements.txt          # 依赖清单
-├── data_output/              # 输出目录
-│   ├── bi_charts/            # BI 图表（PNG）
-│   └── web_agent/            # 网页抓取缓存（CSV/Markdown/JSON）
-├── logs/                     # 运行日志
-├── reports/                  # 生成的报告（Markdown/HTML）
-└── README.md                 # 项目说明
+用户问题
+    │
+    ▼
+┌────────────────────────────────────────────────────────────┐
+│  父 Agent（agent_bi.py）— ReAct 循环                       │
+│  Thought → Action → Observation → Thought → ...          │
+│  MAX_STEPS = 12                                          │
+└────────────────────────────────────────────────────────────┘
+    │
+    ├── call_db ──→ db_agent.py（数据分析子 Agent）
+    │                  ├── 连接 MySQL（Docker）
+    │                  ├── LLM 生成 SQL
+    │                  ├── 执行查询 → 返回 JSON（含 tables + sample + stats）
+    │                  └── 输出强制 UTF-8（解决 GBK 编码问题）
+    │
+    ├── call_info ──→ info_agent.py（信息检索子 Agent）
+    │                  ├── Tavily Search API
+    │                  ├── LLM 智能摘要（含来源标注）
+    │                  ├── 搜索缓存（search_cache.json）
+    │                  ├── ReAct 追问（自动补充搜索）
+    │                  └── 异步搜索 + 并行查询
+    │
+    └── call_web ──→ web_agent.py（网页抓取子 Agent）
+                       ├── 硬解析优先（BeautifulSoup 提取表格）
+                       ├── LLM 辅助降级（硬解析无数据时）
+                       ├── 反爬策略（UA 轮换 + Referer + 代理）
+                       ├── Selenium 降级（动态页面）
+                       ├── 智能缓存（cache.json，24 小时 TTL）
+                       └── 输出 JSON（含 tables + lists）
+    │
+    ▼
+┌────────────────────────────────────────────────────────────┐
+│  generate_bi_charts()                                   │
+│  ├── extract_df_from_tables() → 智能识别名称列 + 数值列   │
+│  ├── 支持 1 行数据生成指标卡                              │
+│  ├── 柱状图（核心图表）                                   │
+│  └── 环形图（≥3 条数据时生成）                           │
+└────────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌────────────────────────────────────────────────────────────┐
+│  报告生成（Markdown / HTML）                              │
+│  ├── 文字分析 + 图表嵌入                                  │
+│  └── 保存至 reports/ 目录                                │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
